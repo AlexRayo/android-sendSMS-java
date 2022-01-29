@@ -1,0 +1,2 @@
+rootProject.name = "JavaSendSMS"
+include ':app'
