@@ -5,9 +5,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,27 +30,33 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     EditText phonenumber, message;
     Button send;
-    Context context = this;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         send = findViewById(R.id.btnSend);
         phonenumber = findViewById(R.id.etNumber);
         message = findViewById(R.id.etMessage);
+        Context context = this;
         send.setOnClickListener(new View.OnClickListener() {
 
             @RequiresApi(api = Build.VERSION_CODES.M)
             public void onClick(View view) {
+
+
+/////////////
                 if (isSimExists()) {
                     String number = phonenumber.getText().toString();
                     String msg = message.getText().toString();
                     try {
-                        SmsManager smsManager = SmsManager.getDefault();
-                        smsManager = SmsManager.getSmsManagerForSubscriptionId(1);
-                        Log.d("msgForSubscriptionId", "Create event called with name: " + smsManager.getSubscriptionId());
-                        smsManager.sendTextMessage(number, "+50585000130", msg, null, null);
+                        //SmsManager smsManager = SmsManager.getDefault();
+                        //smsManager = SmsManager.getSmsManagerForSubscriptionId(1);
+                        //Log.d("msgForSubscriptionId", "Create event called with name: " + smsManager.getSubscriptionId());
+                        //smsManager.sendTextMessage(number, null, msg, sentPI, deliveredPI);
+                        sendSMS(number, msg);
 
                         //get the subs id
                         TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
@@ -104,6 +113,79 @@ public class MainActivity extends AppCompatActivity {
                 }
             }//
 
+            //
+            private void sendSMS(String phoneNumber, String message)
+            {
+                String SENT = "SMS_SENT";
+                String DELIVERED = "SMS_DELIVERED";
+                PendingIntent sentPI = PendingIntent.getBroadcast(context, 0, new Intent(SENT), 0);
+                PendingIntent deliveredPI = PendingIntent.getBroadcast(context, 0,new Intent(DELIVERED), 0);
+
+
+
+// ---when the SMS has been sent---
+                context.registerReceiver(
+                        new BroadcastReceiver()
+                        {
+
+                            @Override
+                            public void onReceive(Context arg0,Intent arg1)
+                            {
+                                Log.d("SMS", "RESULT CODE" + getResultCode());
+                                switch(getResultCode())
+                                {
+                                    case Activity.RESULT_OK:
+                                        Log.d("SMS", "MESSAJE OK");
+                                        break;
+                                    case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                                        Log.d("SMS", "MESSAJE ERROR GENERIC");
+                                        break;
+                                    case SmsManager.RESULT_ERROR_NO_SERVICE:
+                                        Log.d("SMS", "MESSAGE NO SERVICE");
+                                        break;
+                                    case SmsManager.RESULT_ERROR_NULL_PDU:
+                                        Log.d("SMS", "NULL PDU");
+                                        break;
+                                    case SmsManager.RESULT_ERROR_RADIO_OFF:
+                                        Log.d("SMS", "RADIO OFF");
+                                        break;
+                                    default:
+                                        Log.d("SMS", "ERROR SENDING THE FUCKING MESSAGE");
+                                }
+                            }
+                        }, new IntentFilter(SENT));
+                // ---when the SMS has been delivered---
+                context.registerReceiver(
+                        new BroadcastReceiver()
+                        {
+
+                            @Override
+                            public void onReceive(Context arg0,Intent arg1)
+                            {
+                                if (getResultCode() == Activity.RESULT_OK){
+                                    Log.d("SMS SENT", "LOOP IF, SUCCESS SENDING THE MESSAGE");
+                                }
+                                else {
+                                    Log.d("ERROR", "ERROR SENDING THE MESSAGE");
+                                }
+                                switch(getResultCode())
+                                {
+                                    case Activity.RESULT_OK:
+                                        Log.d("SMS SENT", "SUCCESS SENDING THE MESSAGE");
+                                        break;
+                                    case Activity.RESULT_CANCELED:
+                                        Log.d("SMS SENT", "ERROR SENDING THE MESSAGE");
+                                        break;
+                                }
+                            }
+                        }, new IntentFilter(DELIVERED));
+
+
+                SmsManager sms = SmsManager.getDefault();
+                sms.sendTextMessage(phoneNumber, null,message,sentPI, deliveredPI);
+            }
+
         });
+
     }
 }
